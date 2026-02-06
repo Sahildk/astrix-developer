@@ -24,6 +24,8 @@ export default function ReportPage() {
   const [location, setLocation] = useState("");
   const [title, setTitle] = useState("");
   const [landlord, setLandlord] = useState(""); // New State
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
@@ -180,7 +182,9 @@ export default function ReportPage() {
       date: new Date().toISOString(),
       upvotes: 0,
       isVerified: false,
-      images: uploadedImages
+      images: uploadedImages,
+      contactEmail,
+      contactPhone
     });
 
     toast.success("Report Submitted Successfully", {
@@ -298,6 +302,40 @@ export default function ReportPage() {
                 </div>
               </div>
 
+              {/* Private Contact Info Section */}
+              <div className="pt-4 border-t border-white/10 space-y-4">
+                <div className="space-y-1">
+                  <h3 className="text-sm font-medium">Contact Info (Private)</h3>
+                  <p className="text-[10px] text-muted-foreground">Only saved in our secure database. Never visible on the dashboard.</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={contactEmail}
+                      onChange={(e) => setContactEmail(e.target.value)}
+                      required
+                      className="bg-background/50"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="+91 98765..."
+                      value={contactPhone}
+                      onChange={(e) => setContactPhone(e.target.value)}
+                      required
+                      className="bg-background/50"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="title">Issue Title</Label>
                 <Input
@@ -378,6 +416,20 @@ export default function ReportPage() {
                   >
                     <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
                     <p className="text-sm text-red-200">For immediate life-threatening emergencies, please call emergency services (100 or 112) immediately.</p>
+                  </motion.div>
+                )}
+
+                {category === 'harassment' && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-md flex items-start gap-3"
+                  >
+                    <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <p className="text-sm text-amber-200 font-medium">Harassment is a serious offense.</p>
+                      <p className="text-xs text-amber-200/80">Consider documenting all incidents with dates and times. If you feel unsafe, contact local authorities immediately.</p>
+                    </div>
                   </motion.div>
                 )}
 

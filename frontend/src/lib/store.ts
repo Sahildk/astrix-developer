@@ -36,7 +36,7 @@ export function useIssues() {
     }
   };
 
-  const addIssue = async (issue: Issue) => {
+  const addIssue = async (issue: Issue & { contactEmail?: string; contactPhone?: string }) => {
     try {
       const response = await fetch(`${API_BASE}/issues`, {
         method: 'POST',
@@ -50,7 +50,9 @@ export function useIssues() {
           landlordName: issue.landlordName,
           category: issue.category,
           images: issue.images || [],
-          status: issue.status || 'Reported'
+          status: issue.status || 'Reported',
+          contactEmail: issue.contactEmail,
+          contactPhone: issue.contactPhone
         }),
       });
 

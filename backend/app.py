@@ -37,7 +37,9 @@ class CreateIssueRequest(BaseModel):
     location: str
     landlordName: str
     images: List[str] = []
-    status: str = "Reported"
+    status: str = "Under Review"
+    contactEmail: str
+    contactPhone: str
 
 class IssueModel(BaseModel):
     id: Optional[str] = Field(None, alias="_id")
@@ -48,11 +50,22 @@ class IssueModel(BaseModel):
     landlordName: str
     images: List[str] = []
     upvotes: int = 0
-    status: str = "Reported"
+    status: str = "Under Review"
     date: datetime = Field(default_factory=datetime.utcnow)
 
     class Config:
         populate_by_name = True
+
+class AdminIssueModel(IssueModel):
+    contactEmail: Optional[str] = None
+    contactPhone: Optional[str] = None
+
+class AdminLoginRequest(BaseModel):
+    username: str
+    password: str
+
+class AdminStatusUpdateRequest(BaseModel):
+    status: str
 
 class ClassifyRequest(BaseModel):
     description: str
@@ -91,7 +104,13 @@ async def create_issue(issue: CreateIssueRequest):
         status=issue.status
     )
     
+    # Prepare dictionary for DB insertion
     new_issue_dict = new_issue.model_dump(by_alias=True, exclude=["id"])
+    
+    # Add private fields (not in IssueModel)
+    # Add private fields (not in IssueModel)
+    new_issue_dict["contactEmail"] = issue.contactEmail
+    new_issue_dict["contactPhone"] = issue.contactPhone
     
     try:
         result = await db["issues"].insert_one(new_issue_dict)
@@ -133,6 +152,49 @@ async def upvote_issue(id: str):
     
     if result.modified_count == 1:
         return {"message": "Upvoted successfully"}
+    
+    raise HTTPException(status_code=404, detail=f"Issue {id} not found")
+
+@app.post("/admin/login")
+def admin_login(creds: AdminLoginRequest):
+    # HARDCODED CREDENTIALS FOR MVP
+    if creds.username == "admin" and creds.password == "admin123":
+        return {"token": "valid-admin-token", "message": "Login successful"}
+    raise HTTPException(status_code=401, detail="Invalid credentials")
+
+@app.get("/admin/issues", response_model=List[AdminIssueModel])
+async def list_admin_issues():
+    db = get_database()
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+        
+    # Return all issues, sorted by date desc
+    issues = await db["issues"].find().sort("date", -1).to_list(1000)
+    
+    for issue in issues:
+        if "_id" in issue:
+            issue["_id"] = str(issue["_id"])
+            
+    return issues
+
+@app.put("/admin/issues/{id}/status")
+async def update_issue_status(id: str, update: AdminStatusUpdateRequest):
+    db = get_database()
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+
+    try:
+        oid = ObjectId(id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid issue ID format")
+
+    result = await db["issues"].update_one(
+        {"_id": oid},
+        {"$set": {"status": update.status}}
+    )
+    
+    if result.modified_count == 1:
+        return {"message": "Status updated successfully"}
     
     raise HTTPException(status_code=404, detail=f"Issue {id} not found")
 

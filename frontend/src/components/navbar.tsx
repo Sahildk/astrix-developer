@@ -13,7 +13,13 @@ import Magnetic from "@/components/ui/magnetic";
 export function Navbar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
-  
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem("admin_token");
+    setIsAdmin(!!token);
+  }, [pathname]);
+
   // ... (useEffect)
 
   const routes = [
@@ -89,12 +95,12 @@ export function Navbar() {
           </div>
           <span className="text-foreground">Tenant<span className="text-primary">Watch</span></span>
         </Link>
-        
+
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-6">
           {routes.map((route) => (
-            <Link 
-              key={route.href} 
+            <Link
+              key={route.href}
               href={route.href}
               className={cn(
                 "text-sm font-medium transition-colors hover:text-primary relative group",
@@ -103,100 +109,120 @@ export function Navbar() {
             >
               {route.label}
               {pathname === route.href && (
-                  <motion.span 
-                    layoutId="underline" 
-                    className="absolute left-0 top-full block h-[2px] w-full bg-primary mt-1" 
-                  />
+                <motion.span
+                  layoutId="underline"
+                  className="absolute left-0 top-full block h-[2px] w-full bg-primary mt-1"
+                />
               )}
             </Link>
           ))}
           <Magnetic>
-            <Button variant="default" size="sm" className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20">
-              Sign In
-            </Button>
+            {isAdmin ? (
+              <Link href="/admin">
+                <Button variant="outline" size="sm" className="border-primary/50 text-primary hover:bg-primary/10">
+                  Admin Panel
+                </Button>
+              </Link>
+            ) : (
+              <Link href="/admin/login">
+                <Button variant="default" size="sm" className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20">
+                  Sign In
+                </Button>
+              </Link>
+            )}
           </Magnetic>
         </nav>
 
         {/* Mobile Nav Button */}
         <div className="md:hidden z-50">
-            <button 
-                onClick={() => setIsOpen(!isOpen)}
-                className="relative z-50 w-10 h-10 flex flex-col justify-center items-center focus:outline-none"
-            >
-                <div className="w-5 h-4 relative flex flex-col justify-between">
-                    <motion.div 
-                        animate={isOpen ? { rotate: 45, y: 7 } : { rotate: 0, y: 0 }} 
-                        className="w-full h-0.5 bg-foreground origin-center rounded-full"
-                    />
-                     <motion.div 
-                        animate={isOpen ? { opacity: 0, x: 20 } : { opacity: 1, x: 0 }} 
-                        className="w-full h-0.5 bg-foreground rounded-full"
-                    />
-                    <motion.div 
-                        animate={isOpen ? { rotate: -45, y: -7 } : { rotate: 0, y: 0 }} 
-                        className="w-full h-0.5 bg-foreground origin-center rounded-full"
-                    />
-                </div>
-            </button>
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="relative z-50 w-10 h-10 flex flex-col justify-center items-center focus:outline-none"
+          >
+            <div className="w-5 h-4 relative flex flex-col justify-between">
+              <motion.div
+                animate={isOpen ? { rotate: 45, y: 7 } : { rotate: 0, y: 0 }}
+                className="w-full h-0.5 bg-foreground origin-center rounded-full"
+              />
+              <motion.div
+                animate={isOpen ? { opacity: 0, x: 20 } : { opacity: 1, x: 0 }}
+                className="w-full h-0.5 bg-foreground rounded-full"
+              />
+              <motion.div
+                animate={isOpen ? { rotate: -45, y: -7 } : { rotate: 0, y: 0 }}
+                className="w-full h-0.5 bg-foreground origin-center rounded-full"
+              />
+            </div>
+          </button>
         </div>
 
         {/* Full Screen Menu Overlay */}
         <AnimatePresence>
-            {isOpen && (
+          {isOpen && (
+            <motion.div
+              variants={menuVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className="fixed left-0 top-0 w-full h-screen origin-top bg-background text-foreground p-8 flex flex-col items-center md:hidden z-40 border-b border-white/10"
+            >
+              <div className="flex flex-col h-full justify-between w-full max-w-sm mx-auto pt-24 pb-10 px-4">
                 <motion.div
-                    variants={menuVariants}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    className="fixed left-0 top-0 w-full h-screen origin-top bg-background text-foreground p-8 flex flex-col items-center md:hidden z-40 border-b border-white/10"
+                  variants={containerVariants}
+                  initial="initial"
+                  animate="open"
+                  exit="initial"
+                  className="flex flex-col gap-6 items-start w-full"
                 >
-                    <div className="flex flex-col h-full justify-between w-full max-w-sm mx-auto pt-24 pb-10 px-4">
-                        <motion.div
-                            variants={containerVariants}
-                            initial="initial"
-                            animate="open"
-                            exit="initial"
-                            className="flex flex-col gap-6 items-start w-full"
+                  {routes.map((route) => (
+                    <div key={route.href} className="overflow-hidden w-full">
+                      <motion.div variants={mobileLinkVariants}>
+                        <Link
+                          href={route.href}
+                          onClick={() => setIsOpen(false)}
+                          className={cn(
+                            "text-3xl font-bold tracking-tight hover:text-primary transition-colors flex items-center gap-4 w-full",
+                            pathname === route.href ? "text-primary bg-primary/5 pl-4 -ml-4 border-l-4 border-primary" : "text-muted-foreground"
+                          )}
                         >
-                            {routes.map((route) => (
-                                <div key={route.href} className="overflow-hidden w-full">
-                                     <motion.div variants={mobileLinkVariants}>
-                                        <Link
-                                            href={route.href}
-                                            onClick={() => setIsOpen(false)}
-                                            className={cn(
-                                                "text-3xl font-bold tracking-tight hover:text-primary transition-colors flex items-center gap-4 w-full",
-                                                pathname === route.href ? "text-primary bg-primary/5 pl-4 -ml-4 border-l-4 border-primary" : "text-muted-foreground"
-                                            )}
-                                        >
-                                           <route.icon className="h-6 w-6 opacity-70" /> {route.label}
-                                        </Link>
-                                     </motion.div>
-                                </div>
-                            ))}
-                        </motion.div>
-                        
-                        <motion.div 
-                             initial={{ opacity: 0, y: 20 }}
-                             animate={{ opacity: 1, y: 0, transition: { delay: 0.6 } }}
-                             exit={{ opacity: 0 }}
-                             className="w-full border-t border-white/10 pt-8"
-                        >
-                            <Magnetic>
-                                <Button className="w-full text-lg h-12 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
-                                    Sign In
-                                </Button>
-                            </Magnetic>
-                            
-                            <div className="mt-8 flex justify-center gap-6 text-muted-foreground text-sm">
-                                <Link href="#">Terms</Link>
-                                <Link href="#">Privacy</Link>
-                                <Link href="#">Support</Link>
-                            </div>
-                        </motion.div>
+                          <route.icon className="h-6 w-6 opacity-70" /> {route.label}
+                        </Link>
+                      </motion.div>
                     </div>
+                  ))}
                 </motion.div>
-            )}
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0, transition: { delay: 0.6 } }}
+                  exit={{ opacity: 0 }}
+                  className="w-full border-t border-white/10 pt-8"
+                >
+                  <Magnetic>
+                    {isAdmin ? (
+                      <Link href="/admin">
+                        <Button variant="outline" className="w-full text-lg h-12 border-primary/50 text-primary hover:bg-primary/10">
+                          Admin Panel
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Link href="/admin/login">
+                        <Button className="w-full text-lg h-12 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
+                          Sign In
+                        </Button>
+                      </Link>
+                    )}
+                  </Magnetic>
+
+                  <div className="mt-8 flex justify-center gap-6 text-muted-foreground text-sm">
+                    <Link href="#">Terms</Link>
+                    <Link href="#">Privacy</Link>
+                    <Link href="#">Support</Link>
+                  </div>
+                </motion.div>
+              </div>
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
     </header>

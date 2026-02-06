@@ -7,8 +7,10 @@ import { useIssues } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin } from "lucide-react";
+import { MapPin, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Dynamic import to avoid SSR issues with Leaflet
 const HeatmapView = dynamic(() => import("@/components/heatmap-view"), {
@@ -19,9 +21,36 @@ const HeatmapView = dynamic(() => import("@/components/heatmap-view"), {
 export default function HeatmapPage() {
     const { issues } = useIssues();
     const [selectedNeighborhood, setSelectedNeighborhood] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [categoryFilter, setCategoryFilter] = useState("all");
+    const [dateFilter, setDateFilter] = useState("all");
+
+    const filteredIssues = useMemo(() => {
+        return issues.filter(issue => {
+            // Search Filter
+            if (searchQuery && !issue.location.toLowerCase().includes(searchQuery.toLowerCase())) {
+                return false;
+            }
+            // Category Filter
+            if (categoryFilter !== "all" && issue.category.toLowerCase().replace(" ", "-") !== categoryFilter) {
+                return false;
+            }
+            // Date Filter
+            if (dateFilter !== "all") {
+                const date = new Date(issue.date);
+                const now = new Date();
+                const diffTime = Math.abs(now.getTime() - date.getTime());
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                if (dateFilter === "7days" && diffDays > 7) return false;
+                if (dateFilter === "30days" && diffDays > 30) return false;
+            }
+            return true;
+        });
+    }, [issues, searchQuery, categoryFilter, dateFilter]);
 
     const neighborhoodData = useMemo(() => {
-        return issues.reduce((acc, issue) => {
+        return filteredIssues.reduce((acc, issue) => {
             if (!acc[issue.location]) {
                 acc[issue.location] = { count: 0, severity: 0, issues: [] };
             }
@@ -29,7 +58,15 @@ export default function HeatmapPage() {
             acc[issue.location].issues.push(issue);
             return acc;
         }, {} as Record<string, { count: number, severity: number, issues: typeof issues }>);
-    }, [issues]);
+    }, [filteredIssues]);
+
+    // Auto-select if search results in only one neighborhood
+    useMemo(() => {
+        const locations = Object.keys(neighborhoodData);
+        if (locations.length === 1 && searchQuery.length > 2) {
+            setSelectedNeighborhood(locations[0]);
+        }
+    }, [neighborhoodData, searchQuery]);
 
     return (
         <div className="flex flex-col h-[calc(100vh-4rem)]">
@@ -40,10 +77,43 @@ export default function HeatmapPage() {
                     </h1>
                     <p className="text-xs md:text-sm text-muted-foreground">Visualizing report density across neighborhoods.</p>
                 </div>
-                <div className="flex flex-wrap gap-2 md:gap-4 text-xs font-medium">
-                    <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_8px_red]"></div> High Severity</div>
-                    <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-orange-500"></div> Moderate</div>
-                    <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-green-500"></div> Low Severity</div>
+
+                {/* Search & Filter Controls */}
+                <div className="flex flex-wrap items-center gap-2">
+                    <div className="relative">
+                        <Input
+                            placeholder="Search Neighborhood..."
+                            className="h-8 w-40 md:w-56 bg-white/5 border-white/10"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                        <Search className="absolute right-2 top-2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    </div>
+
+                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                        <SelectTrigger className="h-8 w-32 bg-white/5 border-white/10">
+                            <SelectValue placeholder="Category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Categories</SelectItem>
+                            <SelectItem value="safety">Safety Hazard</SelectItem>
+                            <SelectItem value="maintenance">Maintenance</SelectItem>
+                            <SelectItem value="harassment">Harassment</SelectItem>
+                            <SelectItem value="discrimination">Discrimination</SelectItem>
+                            <SelectItem value="unfair-rent">Unfair Rent</SelectItem>
+                        </SelectContent>
+                    </Select>
+
+                    <Select value={dateFilter} onValueChange={setDateFilter}>
+                        <SelectTrigger className="h-8 w-32 bg-white/5 border-white/10">
+                            <SelectValue placeholder="Date" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Time</SelectItem>
+                            <SelectItem value="7days">Last 7 Days</SelectItem>
+                            <SelectItem value="30days">Last 30 Days</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
             </div>
 
@@ -53,7 +123,7 @@ export default function HeatmapPage() {
                     <HeatmapView
                         onSelectNeighborhood={setSelectedNeighborhood}
                         selectedNeighborhood={selectedNeighborhood}
-                        issues={issues} // Pass issues to the map view if it supports it, assuming it helps
+                        issues={filteredIssues}
                     />
                 </div>
 

@@ -47,9 +47,12 @@ const NEIGHBORHOOD_COORDS: Record<string, [number, number]> = {
 // Helper to add slight random jitter to coordinates so points don't stack perfectly
 const jitter = (coord: number) => coord + (Math.random() - 0.5) * 0.005;
 
+import { Issue } from "@/lib/mock-data";
+
 interface HeatmapMapProps {
   onSelectNeighborhood: (name: string) => void;
   selectedNeighborhood: string | null;
+  issues: Issue[];
 }
 
 function MapUpdater({ center }: { center: [number, number] }) {
@@ -60,9 +63,9 @@ function MapUpdater({ center }: { center: [number, number] }) {
   return null;
 }
 
-export default function HeatmapView({ onSelectNeighborhood, selectedNeighborhood }: HeatmapMapProps) {
+export default function HeatmapView({ onSelectNeighborhood, selectedNeighborhood, issues }: HeatmapMapProps) {
   const [mounted, setMounted] = useState(false);
-  const { issues } = useIssues();
+  // const { issues } = useIssues(); // Removed: Now using prop
   const [dynamicCoords, setDynamicCoords] = useState<Record<string, [number, number]>>({});
 
   useEffect(() => {
