@@ -21,7 +21,7 @@ export default function DashboardPage() {
 
     const filterIssues = (status: string) => {
         if (status === "all") return issues;
-        return issues.filter(i => i.status.toLowerCase().replace(" ", "-") === status);
+        return issues.filter(i => i.status && i.status.toLowerCase().replace(" ", "-") === status);
     };
 
     const StatusIcon = ({ status }: { status: IssueStatus }) => {

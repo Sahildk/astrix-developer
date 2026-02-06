@@ -45,16 +45,30 @@ export default function ReportPage() {
 
           if (response.ok) {
             const data = await response.json();
-            const suggested = data.category;
+            console.log("AI Response:", data); // Debug log
+            const suggested = data.category; // e.g. "Safety", "Harassment"
 
             if (suggested) {
               const lower = suggested.toLowerCase();
-              // Map lowercase classifier result to Select values if needed
-              if (lower === 'safety') setCategory('safety');
-              else if (lower === 'maintenance') setCategory('maintenance');
-              else if (lower === 'harassment') setCategory('harassment');
-              else if (lower === 'discrimination') setCategory('discrimination');
-              else if (lower === 'unfair-rent') setCategory('unfair-rent');
+              
+              const map: Record<string, string> = {
+                'safety': 'safety',
+                'maintenance': 'maintenance',
+                'harassment': 'harassment',
+                'discrimination': 'discrimination',
+                'unfair rent': 'unfair-rent', // Handle potential spaces
+                'unfair-rent': 'unfair-rent'
+              };
+
+              // Check if we have a valid mapping, otherwise default or ignore
+              if (map[lower]) {
+                setCategory(map[lower]);
+              } else {
+                 // Try direct assignment if it matches any value (fallback)
+                 if (['safety', 'maintenance', 'harassment', 'discrimination', 'unfair-rent'].includes(lower)) {
+                     setCategory(lower);
+                 }
+              }
             }
           }
         } catch (error) {
