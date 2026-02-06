@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Issue } from './mock-data';
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export function useIssues() {
   const [issues, setIssues] = useState<Issue[]>([]);

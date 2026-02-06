@@ -106,7 +106,7 @@ export default function ReportPage() {
       setIsAnalyzing(true);
       const timer = setTimeout(async () => {
         try {
-          const response = await fetch('http://localhost:8000/classify', {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/classify`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
