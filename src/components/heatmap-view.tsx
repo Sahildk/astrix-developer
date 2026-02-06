@@ -1,11 +1,12 @@
 
+
 "use client";
 
 import { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { MOCK_ISSUES } from "@/lib/mock-data";
+import { Issue } from "@/lib/mock-data";
 import { Badge } from "@/components/ui/badge";
 
 // Fix Leaflet marker icon issue in Next.js
@@ -49,6 +50,7 @@ const jitter = (coord: number) => coord + (Math.random() - 0.5) * 0.005;
 interface HeatmapMapProps {
     onSelectNeighborhood: (name: string) => void;
     selectedNeighborhood: string | null;
+    issues: Issue[];
 }
 
 function MapUpdater({ center }: { center: [number, number] }) {
@@ -59,7 +61,7 @@ function MapUpdater({ center }: { center: [number, number] }) {
     return null;
 }
 
-export default function HeatmapView({ onSelectNeighborhood, selectedNeighborhood }: HeatmapMapProps) {
+export default function HeatmapView({ onSelectNeighborhood, selectedNeighborhood, issues }: HeatmapMapProps) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -69,7 +71,7 @@ export default function HeatmapView({ onSelectNeighborhood, selectedNeighborhood
   if (!mounted) return <div className="w-full h-full bg-muted flex items-center justify-center">Loading Map...</div>;
 
   // Process data to get points
-  const points = MOCK_ISSUES.map(issue => {
+  const points = issues.map(issue => {
     const baseCoords = NEIGHBORHOOD_COORDS[issue.location];
     if (!baseCoords) return null;
     return {
@@ -81,8 +83,8 @@ export default function HeatmapView({ onSelectNeighborhood, selectedNeighborhood
 
   // Group by Neighborhood for "Heat" circles
   const neighborhoodSeverity = Object.keys(NEIGHBORHOOD_COORDS).map(name => {
-      const issues = MOCK_ISSUES.filter(i => i.location === name);
-      const severity = issues.length; // Simple count-based severity
+      const neighborhoodIssues = issues.filter(i => i.location === name);
+      const severity = neighborhoodIssues.length; // Simple count-based severity
       const coords = NEIGHBORHOOD_COORDS[name];
       return { name, severity, coords };
   }).filter(n => n.severity > 0);
@@ -148,3 +150,4 @@ export default function HeatmapView({ onSelectNeighborhood, selectedNeighborhood
     </MapContainer>
   );
 }
+
