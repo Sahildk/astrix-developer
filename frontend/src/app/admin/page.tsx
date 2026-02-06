@@ -57,11 +57,11 @@ export default function AdminDashboardPage() {
     if (loading) return <div className="h-screen flex items-center justify-center">Loading Admin Data...</div>;
 
     return (
-        <div className="min-h-screen bg-background p-8">
+        <div className="min-h-screen bg-background p-4 md:p-8">
             <div className="max-w-6xl mx-auto space-y-8">
 
                 {/* Header */}
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
                         <p className="text-muted-foreground">Manage reports and verification queue</p>
@@ -181,11 +181,15 @@ function AdminIssueCard({
 }) {
     return (
         <Card className="bg-card/50 border-white/10">
-            <CardHeader className="flex flex-row items-start justify-between pb-2">
-                <div className="space-y-1">
-                    <CardTitle className="text-lg">{issue.title}</CardTitle>
-                    <CardDescription className="flex items-center gap-2">
-                        <MapPin className="h-3 w-3" /> {issue.location} · {issue.landlordName}
+            <CardHeader className="flex flex-col md:flex-row items-start justify-between gap-4 pb-2">
+                <div className="space-y-1 w-full">
+                    <CardTitle className="text-lg leading-tight">{issue.title}</CardTitle>
+                    <CardDescription className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs sm:text-sm">
+                        <span className="flex items-center gap-1 min-w-0 truncate">
+                            <MapPin className="h-3 w-3 shrink-0" /> <span className="truncate">{issue.location}</span>
+                        </span>
+                        <span className="hidden sm:inline">·</span>
+                        <span className="truncate">{issue.landlordName}</span>
                         <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary uppercase">
                             {issue.category}
                         </span>
@@ -195,7 +199,7 @@ function AdminIssueCard({
                     issue.status === 'Resolved' ? 'default' :
                         issue.status === 'Dismissed' ? 'destructive' :
                             issue.status === 'Reported' ? 'outline' : 'secondary'
-                }>
+                } className="shrink-0 self-start md:self-center">
                     {issue.status}
                 </Badge>
             </CardHeader>

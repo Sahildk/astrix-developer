@@ -200,13 +200,13 @@ export function Navbar() {
                 >
                   <Magnetic>
                     {isAdmin ? (
-                      <Link href="/admin">
+                      <Link href="/admin" onClick={() => setIsOpen(false)}>
                         <Button variant="outline" className="w-full text-lg h-12 border-primary/50 text-primary hover:bg-primary/10">
                           Admin Panel
                         </Button>
                       </Link>
                     ) : (
-                      <Link href="/admin/login">
+                      <Link href="/admin/login" onClick={() => setIsOpen(false)}>
                         <Button className="w-full text-lg h-12 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
                           Sign In
                         </Button>
