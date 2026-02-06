@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, AlertTriangle, CheckCircle2, Sparkles } from "lucide-react";
+import { Upload, AlertTriangle, CheckCircle2, Sparkles, X, FileText, Loader2 } from "lucide-react";
 import { useIssues } from "@/lib/store";
 import { IssueCategory, IssueStatus } from "@/lib/mock-data";
 
@@ -25,6 +25,75 @@ export default function ReportPage() {
   const [title, setTitle] = useState("");
   const [landlord, setLandlord] = useState(""); // New State
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    // Check configuration
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+
+    if (!cloudName || !uploadPreset) {
+      toast.error("Configuration Error", {
+        description: "Cloudinary keys are missing in .env.local"
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    const newUrls: string[] = [];
+
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+
+        // Basic validation
+        if (file.size > 5 * 1024 * 1024) { // 5MB
+          toast.error(`File ${file.name} is too large (max 5MB)`);
+          continue;
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("upload_preset", uploadPreset);
+
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!res.ok) {
+          throw new Error("Upload failed");
+        }
+
+        const data = await res.json();
+        newUrls.push(data.secure_url);
+      }
+
+      if (newUrls.length > 0) {
+        setUploadedImages(prev => [...prev, ...newUrls]);
+        toast.success(`Uploaded ${newUrls.length} file(s)`);
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("Failed to upload image(s). Please try again.");
+    } finally {
+      setIsUploading(false);
+      // Reset input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setUploadedImages(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
@@ -50,7 +119,7 @@ export default function ReportPage() {
 
             if (suggested) {
               const lower = suggested.toLowerCase();
-              
+
               const map: Record<string, string> = {
                 'safety': 'safety',
                 'maintenance': 'maintenance',
@@ -64,10 +133,10 @@ export default function ReportPage() {
               if (map[lower]) {
                 setCategory(map[lower]);
               } else {
-                 // Try direct assignment if it matches any value (fallback)
-                 if (['safety', 'maintenance', 'harassment', 'discrimination', 'unfair-rent'].includes(lower)) {
-                     setCategory(lower);
-                 }
+                // Try direct assignment if it matches any value (fallback)
+                if (['safety', 'maintenance', 'harassment', 'discrimination', 'unfair-rent'].includes(lower)) {
+                  setCategory(lower);
+                }
               }
             }
           }
@@ -110,7 +179,8 @@ export default function ReportPage() {
       landlordName: landlord || "Unknown",
       date: new Date().toISOString(),
       upvotes: 0,
-      isVerified: false
+      isVerified: false,
+      images: uploadedImages
     });
 
     toast.success("Report Submitted Successfully", {
@@ -211,6 +281,9 @@ export default function ReportPage() {
                     required
                     className="bg-background/50"
                   />
+                  <p className="text-[10px] text-muted-foreground pt-1">
+                    * Include city name for better map accuracy (e.g. "Whitefield, Bangalore")
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="landlord">Landlord / Owner Name</Label>
@@ -239,10 +312,60 @@ export default function ReportPage() {
 
               <div className="space-y-2">
                 <Label>Evidence (Optional)</Label>
-                <div className="border-2 border-dashed border-white/20 rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-white/5 transition-colors cursor-pointer group">
-                  <Upload className="h-8 w-8 text-muted-foreground mb-2 group-hover:text-primary transition-colors" />
-                  <p className="text-sm text-muted-foreground">Click to upload photos or documents</p>
-                  <p className="text-xs text-muted-foreground/50 mt-1">supports JPG, PNG, PDF</p>
+
+                {/* File List */}
+                {uploadedImages.length > 0 && (
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    {uploadedImages.map((url, idx) => {
+                      const isPdf = url.toLowerCase().endsWith('.pdf');
+                      return (
+                        <div key={idx} className="relative group bg-background/50 border rounded-md p-2 flex items-center gap-2 overflow-hidden">
+                          {isPdf ? (
+                            <FileText className="h-8 w-8 text-blue-400 shrink-0" />
+                          ) : (
+                            <img src={url} alt="Evidence" className="h-12 w-12 object-cover rounded bg-muted" />
+                          )}
+                          <span className="text-xs truncate flex-1 text-muted-foreground">{url.split('/').pop()}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-1 h-6 w-6 rounded-full bg-black/50 hover:bg-red-500/80 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => removeFile(idx)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                <input
+                  type="file"
+                  multiple
+                  accept="image/jpeg,image/png,image/jpg,application/pdf"
+                  ref={fileInputRef}
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+
+                <div
+                  className={`border-2 border-dashed border-white/20 rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-white/5 transition-colors cursor-pointer group ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
+                      <p className="text-sm text-muted-foreground">Uploading...</p>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-8 w-8 text-muted-foreground mb-2 group-hover:text-primary transition-colors" />
+                      <p className="text-sm text-muted-foreground">Click to upload photos or documents</p>
+                      <p className="text-xs text-muted-foreground/50 mt-1">supports JPG, PNG, PDF</p>
+                    </>
+                  )}
                 </div>
               </div>
 

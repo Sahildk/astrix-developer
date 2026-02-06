@@ -22,7 +22,8 @@ export function useIssues() {
         // Map _id to id for frontend compatibility
         const mappedIssues = data.map((issue: any) => ({
           ...issue,
-          id: issue._id || issue.id
+          id: issue._id || issue.id,
+          date: issue.date || issue.created_at || new Date().toISOString() // robust fallback
         }));
         setIssues(mappedIssues);
       } else {
@@ -47,7 +48,9 @@ export function useIssues() {
           description: issue.description,
           location: issue.location,
           landlordName: issue.landlordName,
-          category: issue.category
+          category: issue.category,
+          images: issue.images || [],
+          status: issue.status || 'Reported'
         }),
       });
 
@@ -79,7 +82,7 @@ export function useIssues() {
 
       if (response.ok) {
         // Optimistically update UI
-        const newIssues = issues.map(i => 
+        const newIssues = issues.map(i =>
           i.id === id ? { ...i, upvotes: i.upvotes + 1 } : i
         );
         setIssues(newIssues);

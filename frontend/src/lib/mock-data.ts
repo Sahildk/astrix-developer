@@ -12,6 +12,7 @@ export interface Issue {
   status: IssueStatus;
   location: string; // Neighborhood or Building
   landlordName: string; // New field
+  images?: string[];
   date: string;
   upvotes: number;
   isVerified: boolean;

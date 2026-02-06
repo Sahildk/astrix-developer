@@ -5,7 +5,9 @@ import { useIssues } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Building2, MapPin, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Building2, MapPin, AlertTriangle, CheckCircle2, Clock, XCircle, FileText, Image as ImageIcon } from "lucide-react";
+import { IssueStatus } from "@/lib/mock-data";
+import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
@@ -22,6 +24,24 @@ export default function LandlordProfilePage({ params }: { params: Promise<{ name
     const resolvedIssues = landlordIssues.filter(i => i.status === 'Resolved').length;
     const safetyIssues = landlordIssues.filter(i => i.category === 'Safety').length;
     const uniqueBuildings = new Set(landlordIssues.map(i => i.location)).size;
+
+    const StatusIcon = ({ status }: { status: IssueStatus }) => {
+        switch (status) {
+            case 'Resolved': return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+            case 'Under Review': return <Clock className="h-4 w-4 text-amber-500" />;
+            case 'Dismissed': return <XCircle className="h-4 w-4 text-red-500" />;
+            default: return <FileText className="h-4 w-4 text-blue-500" />;
+        }
+    };
+
+    const getStatusColor = (status: IssueStatus) => {
+        switch (status) {
+            case 'Resolved': return "bg-green-500/10 text-green-500 border-green-500/20";
+            case 'Under Review': return "bg-amber-500/10 text-amber-500 border-amber-500/20";
+            case 'Dismissed': return "bg-red-500/10 text-red-500 border-red-500/20";
+            default: return "bg-blue-500/10 text-blue-500 border-blue-500/20";
+        }
+    };
 
     return (
         <div className="container mx-auto px-4 py-8 space-y-8">
@@ -87,20 +107,31 @@ export default function LandlordProfilePage({ params }: { params: Promise<{ name
                                                         {new Date(issue.date).toLocaleDateString()}
                                                     </div>
                                                 </div>
-                                                <Badge variant={issue.status === 'Resolved' ? 'secondary' : 'outline'}>{issue.status}</Badge>
+                                                <Badge
+                                                    variant="outline"
+                                                    className={cn("capitalize whitespace-nowrap", getStatusColor(issue.status))}
+                                                >
+                                                    <span className="mr-1"><StatusIcon status={issue.status} /></span>
+                                                    {issue.status}
+                                                </Badge>
                                             </div>
                                             <p className="text-sm text-muted-foreground mb-3">{issue.description}</p>
                                             <div className="flex gap-2">
                                                 <Badge variant="outline" className="text-xs">{issue.category}</Badge>
+                                                {issue.images && issue.images.length > 0 && (
+                                                    <Badge variant="secondary" className="flex items-center gap-1 text-[10px] h-5 px-1.5">
+                                                        <ImageIcon className="h-3 w-3" />
+                                                        <span>{issue.images.length}</span>
+                                                    </Badge>
+                                                )}
                                             </div>
                                         </CardContent>
                                     </Card>
                                 </motion.div>
-                            ))}
-                        </div>
+                            ))}</div>
                     )}
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }

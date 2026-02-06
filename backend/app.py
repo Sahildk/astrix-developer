@@ -5,6 +5,7 @@ from typing import List, Optional
 from datetime import datetime
 from uuid import uuid4
 from contextlib import asynccontextmanager
+from bson import ObjectId
 
 from classifier import classify_issue
 from database import connect_to_mongo, close_mongo_connection, get_database
@@ -35,6 +36,8 @@ class CreateIssueRequest(BaseModel):
     category: Optional[str] = None
     location: str
     landlordName: str
+    images: List[str] = []
+    status: str = "Reported"
 
 class IssueModel(BaseModel):
     id: Optional[str] = Field(None, alias="_id")
@@ -43,8 +46,10 @@ class IssueModel(BaseModel):
     category: str
     location: str
     landlordName: str
+    images: List[str] = []
     upvotes: int = 0
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    status: str = "Reported"
+    date: datetime = Field(default_factory=datetime.utcnow)
 
     class Config:
         populate_by_name = True
@@ -81,13 +86,16 @@ async def create_issue(issue: CreateIssueRequest):
         description=issue.description,
         category=final_category,
         location=issue.location,
-        landlordName=issue.landlordName
+        landlordName=issue.landlordName,
+        images=issue.images,
+        status=issue.status
     )
     
-    new_issue_dict = new_issue.model_dump(by_alias=True)
+    new_issue_dict = new_issue.model_dump(by_alias=True, exclude=["id"])
     
     try:
-        await db["issues"].insert_one(new_issue_dict)
+        result = await db["issues"].insert_one(new_issue_dict)
+        new_issue.id = str(result.inserted_id)
         return new_issue
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -99,6 +107,12 @@ async def list_issues():
         raise HTTPException(status_code=503, detail="Database not initialized")
         
     issues = await db["issues"].find().to_list(1000)
+    
+    # Convert _id to string for serialization
+    for issue in issues:
+        if "_id" in issue:
+            issue["_id"] = str(issue["_id"])
+            
     return issues
 
 @app.put("/issues/{id}/upvote")
@@ -107,8 +121,13 @@ async def upvote_issue(id: str):
     if db is None:
         raise HTTPException(status_code=503, detail="Database not initialized")
 
+    try:
+        oid = ObjectId(id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid issue ID format")
+
     result = await db["issues"].update_one(
-        {"_id": id},
+        {"_id": oid},
         {"$inc": {"upvotes": 1}}
     )
     

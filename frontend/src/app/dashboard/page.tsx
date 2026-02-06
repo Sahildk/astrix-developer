@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { FileText, CheckCircle2, Clock, XCircle, ChevronRight, ThumbsUp, Building2 } from "lucide-react";
+import { FileText, CheckCircle2, Clock, XCircle, ChevronRight, ThumbsUp, Building2, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import Link from "next/link";
@@ -72,7 +72,7 @@ export default function DashboardPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {filterIssues(activeTab).map((issue, index) => (
                             <motion.div
-                                key={issue.id}
+                                key={issue.id || `issue-${index}`}
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ duration: 0.2, delay: index * 0.05 }}
@@ -105,17 +105,25 @@ export default function DashboardPage() {
                                             <span className="capitalize px-2 py-0.5 rounded-full bg-white/5 text-foreground/80">
                                                 {issue.category}
                                             </span>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-6 px-2 hover:bg-primary/10 hover:text-primary"
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    upvoteIssue(issue.id);
-                                                }}
-                                            >
-                                                <ThumbsUp className="h-3 w-3 mr-1" /> {issue.upvotes}
-                                            </Button>
+                                            <div className="flex items-center gap-3">
+                                                {issue.images && issue.images.length > 0 && (
+                                                    <span className="flex items-center text-xs text-muted-foreground" title="Has images">
+                                                        <ImageIcon className="h-3 w-3 mr-1" />
+                                                        {issue.images.length}
+                                                    </span>
+                                                )}
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-6 px-2 hover:bg-primary/10 hover:text-primary"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        upvoteIssue(issue.id);
+                                                    }}
+                                                >
+                                                    <ThumbsUp className="h-3 w-3 mr-1" /> {issue.upvotes}
+                                                </Button>
+                                            </div>
                                         </div>
                                     </CardContent>
                                 </Card>

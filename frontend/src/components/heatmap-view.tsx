@@ -7,6 +7,7 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useIssues } from "@/lib/store";
 import { Badge } from "@/components/ui/badge";
+import { Image as ImageIcon } from "lucide-react";
 
 // Fix Leaflet marker icon issue in Next.js
 const iconUrl = "https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon.png";
@@ -62,16 +63,61 @@ function MapUpdater({ center }: { center: [number, number] }) {
 export default function HeatmapView({ onSelectNeighborhood, selectedNeighborhood }: HeatmapMapProps) {
   const [mounted, setMounted] = useState(false);
   const { issues } = useIssues();
+  const [dynamicCoords, setDynamicCoords] = useState<Record<string, [number, number]>>({});
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // Geocoding Effect
+  useEffect(() => {
+    const locationsToFetch = new Set<string>();
+    issues.forEach(i => {
+      // Check if location is unknown (neither in static list nor already fetched)
+      if (!NEIGHBORHOOD_COORDS[i.location] && !dynamicCoords[i.location]) {
+        locationsToFetch.add(i.location);
+      }
+    });
+
+    const fetchCoords = async () => {
+      const newCoords: Record<string, [number, number]> = {};
+      const locs = Array.from(locationsToFetch);
+
+      for (const loc of locs) {
+        try {
+          // Append 'Bangalore' or similar context if needed, or keep generic. 
+          // Using generic search for now.
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(loc)}&limit=1`, {
+            headers: { 'User-Agent': 'TenantWatch-App/1.0' }
+          });
+          const data = await res.json();
+          if (data && data.length > 0) {
+            newCoords[loc] = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+          }
+        } catch (e) {
+          console.error(`Failed to geocode ${loc}`, e);
+        }
+        // Politeness delay for OpenStreetMap
+        await new Promise(r => setTimeout(r, 1000));
+      }
+
+      if (Object.keys(newCoords).length > 0) {
+        setDynamicCoords(prev => ({ ...prev, ...newCoords }));
+      }
+    };
+
+    if (locationsToFetch.size > 0) {
+      fetchCoords();
+    }
+  }, [issues, dynamicCoords]);
+
   if (!mounted) return <div className="w-full h-full bg-muted flex items-center justify-center">Loading Map...</div>;
+
+  const allCoords = { ...NEIGHBORHOOD_COORDS, ...dynamicCoords };
 
   // Process data to get points
   const points = issues.map(issue => {
-    const baseCoords = NEIGHBORHOOD_COORDS[issue.location];
+    const baseCoords = allCoords[issue.location];
     if (!baseCoords) return null;
     return {
       ...issue,
@@ -81,15 +127,16 @@ export default function HeatmapView({ onSelectNeighborhood, selectedNeighborhood
   }).filter(p => p !== null);
 
   // Group by Neighborhood for "Heat" circles
-  const neighborhoodSeverity = Object.keys(NEIGHBORHOOD_COORDS).map(name => {
+  const neighborhoodSeverity = Object.keys(allCoords).map(name => {
     const locationIssues = issues.filter(i => i.location === name);
     const severity = locationIssues.length; // Simple count-based severity
-    const coords = NEIGHBORHOOD_COORDS[name];
+    const coords = allCoords[name];
+    if (severity === 0) return null;
     return { name, severity, coords };
-  }).filter(n => n.severity > 0);
+  }).filter(n => n !== null) as { name: string, severity: number, coords: [number, number] }[];
 
-  const activeCenter = selectedNeighborhood && NEIGHBORHOOD_COORDS[selectedNeighborhood]
-    ? NEIGHBORHOOD_COORDS[selectedNeighborhood]
+  const activeCenter = selectedNeighborhood && allCoords[selectedNeighborhood]
+    ? allCoords[selectedNeighborhood]
     : [12.9716, 77.6412] as [number, number]; // Default to Indiranagar
 
   return (
@@ -140,7 +187,13 @@ export default function HeatmapView({ onSelectNeighborhood, selectedNeighborhood
               <div className="p-1 min-w-[200px]">
                 <Badge variant="outline" className="mb-2 text-[10px] text-slate-800 border-slate-300">{point.category}</Badge>
                 <h3 className="font-bold text-sm text-slate-900 mb-1">{point.title}</h3>
-                <p className="text-xs text-slate-600">{point.location}</p>
+                <p className="text-xs text-slate-600 mb-1">{point.location}</p>
+                {point.images && point.images.length > 0 && (
+                  <div className="flex items-center gap-1 text-[10px] text-slate-500">
+                    <ImageIcon className="h-3 w-3" />
+                    <span>{point.images.length} image(s)</span>
+                  </div>
+                )}
               </div>
             </Popup>
           </Marker>
